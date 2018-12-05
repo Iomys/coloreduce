@@ -6,10 +6,11 @@
 #include <array>
 #include <cmath>
 
-#define MAX 255
 
 using namespace std;
 struct Couleur;
+struct Donnees;
+
 
 //Définition des types
 
@@ -21,17 +22,20 @@ struct Couleur{
     int v;
     int b;
 };
+constexpr int MAX(255);
+constexpr Couleur noir = {0,0,0};
+constexpr double seuil_min(0.);
+constexpr double seuil_max(1.);
+
 struct Donnees{
     vector<vector<Couleur>> image;
     size_t li;              //Nombre de lignes du tableau
     size_t col;             //Nombre de colonnes du tableau
     unsigned int nbR;       //Nombre de couleurs réduites
     unsigned int nbF;       //Nombre de filtrage
-    Coul_list coul_redu={{0,0,0}};    //Liste des couleurs réduites
-    vector<double> seuils;  //Liste des seuils
+    Coul_list coul_redu={noir};    //Liste des couleurs réduites
+    vector<double> seuils={seuil_min};  //Liste des seuils
 };
-
-
 
 
 //Fonctions d'erreurs
@@ -51,7 +55,10 @@ void import_image(Donnees& donnees);
 //Fonctions de modification de l'image
 void seuillage(Donnees& donnees);
 double int_normalisee(Couleur couleur);
+void filtrage(Donnees& donnees);
 
+
+void exportation(Donnees& donnees);
 //Fonctions de tests
 bool is_color(int color);
 
@@ -59,7 +66,8 @@ int main() {
     //Variables globales
     Donnees donnees;
     import(donnees);
-    cout << " Fin";
+    seuillage(donnees);
+    exportation(donnees);
     return 0;
 }
 void import(Donnees& donnees) {
@@ -68,6 +76,7 @@ void import(Donnees& donnees) {
     import_seuils(donnees);
     import_filtrages(donnees);
     import_image(donnees);
+
 
 }
 void import_nbR(Donnees& donnees){
@@ -94,7 +103,7 @@ void import_seuils(Donnees& donnees){
         }
         donnees.seuils.push_back(transfert);
     }
-    donnees.seuils.push_back(1.);
+    donnees.seuils.push_back(seuil_max);
 }
 void import_filtrages(Donnees& donnees){
     cin >> donnees.nbF;
@@ -108,12 +117,26 @@ void seuillage(Donnees& donnees){
     for(size_t li = 0; li<donnees.li; ++li){
         for(size_t col = 0; col<donnees.col;++col){
             double intensite(int_normalisee(donnees.image[li][col]));
-            for(size_t i = 0; i <donnees.nbR;++i){
-                
+            bool seuil_trouve(false);
+            for(size_t i = 0; i < donnees.nbR && !seuil_trouve ;++i){
+                if(donnees.seuils[i] <= intensite && donnees.seuils[i+1]> intensite){
+                    donnees.image[li][col]=donnees.coul_redu[i+1];
+                    seuil_trouve=true;
+                }
+                if(!seuil_trouve)
+                    donnees.image[li][col]=donnees.coul_redu.back();
             }
         }
     }
 
+}
+
+void filtrage(Donnees& donnees){
+    for(size_t li=1; li < donnees.li-1; ++li){
+        for(size_t col=1; col < donnees.col-1; ++col){
+
+        }
+    }
 }
 
 void import_image(Donnees& donnees){
@@ -146,6 +169,15 @@ double int_normalisee(Couleur couleur){
     /(sqrt(3)*MAX);
 }
 
+void exportation(Donnees& donnees){
+    for(size_t li = 0; li < donnees.li; ++li){
+        for(size_t col = 0; col < donnees.col; ++col){
+        cout << donnees.image[li][col].r << " " << donnees.image[li][col].v << " "
+            << donnees.image[li][col].b << " ";
+        }
+        cout << endl;
+    }
+}
 void error_nbR(int nbR) {
     cout << "Invalid number of colors: " << nbR << endl;
 }
