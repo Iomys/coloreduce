@@ -15,6 +15,7 @@ struct Donnees;
 //Définition des types
 
 typedef vector<Couleur> Coul_list;
+typedef vector<vector<size_t>> Mat_indice; //Matrice contenant des indices de vector
 
 //Définition des structures
 struct Couleur{
@@ -23,9 +24,11 @@ struct Couleur{
     int b;
 };
 constexpr int MAX(255);
-constexpr Couleur noir = {0,0,0};
+constexpr Couleur coul_bord = {0,0,0};
 constexpr double seuil_min(0.);
 constexpr double seuil_max(1.);
+constexpr int pixels_voisins_min(6);
+constexpr size_t ind_coul_bord(0);
 
 struct Donnees{
     vector<vector<Couleur>> image;
@@ -33,7 +36,7 @@ struct Donnees{
     size_t col;             //Nombre de colonnes du tableau
     unsigned int nbR;       //Nombre de couleurs réduites
     unsigned int nbF;       //Nombre de filtrage
-    Coul_list coul_redu={noir};    //Liste des couleurs réduites
+    Coul_list coul_redu={coul_bord};    //Liste des couleurs réduites
     vector<double> seuils={seuil_min};  //Liste des seuils
 };
 
@@ -53,9 +56,9 @@ void import_seuils(Donnees& donnees) ;
 void import_image(Donnees& donnees);
 
 //Fonctions de modification de l'image
-void seuillage(Donnees& donnees);
+Mat_indice seuillage(const Donnees& donnees);
 double int_normalisee(Couleur couleur);
-void filtrage(Donnees& donnees);
+void filtrage(const Donnees& donnees, Mat_indice& entree);
 
 
 void exportation(Donnees& donnees);
@@ -66,8 +69,9 @@ int main() {
     //Variables globales
     Donnees donnees;
     import(donnees);
-    seuillage(donnees);
-    exportation(donnees);
+    Mat_indice indices_redu=seuillage(donnees);
+    filtrage(donnees, indices_redu);
+    exportation(indices_redu);
     return 0;
 }
 void import(Donnees& donnees) {
@@ -113,29 +117,54 @@ void import_filtrages(Donnees& donnees){
     }
 }
 
-void seuillage(Donnees& donnees){
+Mat_indice seuillage(const Donnees& donnees){
+    Mat_indice img_coul_redu(donnees.li, vector<size_t>(donnees.col));
     for(size_t li = 0; li<donnees.li; ++li){
         for(size_t col = 0; col<donnees.col;++col){
             double intensite(int_normalisee(donnees.image[li][col]));
             bool seuil_trouve(false);
-            for(size_t i = 0; i < donnees.nbR && !seuil_trouve ;++i){
-                if(donnees.seuils[i] <= intensite && donnees.seuils[i+1]> intensite){
-                    donnees.image[li][col]=donnees.coul_redu[i+1];
-                    seuil_trouve=true;
+            for(size_t i = 0; i < donnees.nbR && !seuil_trouve ;++i) {
+                if (donnees.seuils[i] <= intensite &&
+                    donnees.seuils[i + 1] > intensite) {
+                    img_coul_redu[li][col] = i+1 ;
+                    seuil_trouve = true;
                 }
-                if(!seuil_trouve)
-                    donnees.image[li][col]=donnees.coul_redu.back();
             }
+            if (!seuil_trouve)
+                img_coul_redu[li][col] = donnees.nbR+1;
         }
     }
-
+    return img_coul_redu;
 }
 
-void filtrage(Donnees& donnees){
-    for(size_t li=1; li < donnees.li-1; ++li){
-        for(size_t col=1; col < donnees.col-1; ++col){
 
+void filtrage(const Donnees& donnees, Mat_indice& entree){
+    Mat_indice destination(donnees.li, vector<size_t>(donnees.col, ind_coul_bord));
+    for(int k = 0; k<donnees.nbF; k++) {
+        for (size_t li = 1; li < donnees.li - 1; ++li) {
+            for (size_t col = 1; col < donnees.col - 1; ++col) {
+                vector<int> nb_pixels_voisins(donnees.nbR, 0);
+                //Comptage des couleurs environnantes
+                for (int i = -1; i <= 1; ++i) {
+                    for (int j = -1; j <= 2; ++j) {
+                        if (!(j == 0 && i == 0)) {
+                            ++nb_pixels_voisins[entree[li - i][col - j]];
+                        }
+                    }
+                }
+                //On regarde  si une couleur a au moins 6 pixels voisins
+                for (size_t i = 0; i < donnees.nbR; ++i) {
+
+                    if (nb_pixels_voisins[i] >= pixels_voisins_min) {
+                        destination[li][col] = i + 1;
+                        i = donnees.nbR; //sortie de la boucle au prochain passage
+                    } else if (i == donnees.nbR) {
+                        destination[li][col] = ind_coul_bord;
+                    }
+                }
+            }
         }
+        entree.swap(destination);
     }
 }
 
@@ -145,6 +174,7 @@ void import_image(Donnees& donnees){
     cin >> format1 >> format2 >> donnees.col >> donnees.li >> couleur_max; //Manque les tests pour savoir si image compatible
     donnees.image.resize(donnees.li);
     for(int li(0); li < donnees.li; ++li){
+        donnees.image[li].reserve(donnees.col);
         for(int col(0); col < donnees.col; ++col){
             Couleur transfert;
             cin >> transfert.r >> transfert.v >> transfert.b;
