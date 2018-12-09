@@ -31,10 +31,10 @@ constexpr size_t ind_coul_bord(0);
 
 struct Donnees{
     vector<vector<Couleur>> image;
-    size_t li;              //Nombre de lignes du tableau
-    size_t col;             //Nombre de colonnes du tableau
-    unsigned int nbR;       //Nombre de couleurs réduites
-    unsigned int nbF;       //Nombre de filtrage
+    size_t li=0;              //Nombre de lignes du tableau
+    size_t col=0;             //Nombre de colonnes du tableau
+    unsigned int nbR=0;       //Nombre de couleurs réduites
+    unsigned int nbF=0;       //Nombre de filtrage
     Coul_list coul_redu={coul_bord};    //Liste des couleurs réduites
     vector<double> seuils={seuil_min};  //Liste des seuils
 };
@@ -62,7 +62,7 @@ void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destinatio
 
 void exportation(const Donnees& donnees, const Mat_indice& indice_redu);
 //Fonctions de tests
-bool is_color(int color);
+void is_color(int color);
 
 int main() {
     //Variables globales
@@ -73,7 +73,7 @@ int main() {
     for (int incre = 0; incre < donnees.nbF; ++incre) {
         filtrage(donnees, indices_redu, destination);
         indices_redu = destination;
-        //test
+        cout << "Filtrage n° " << incre+1 << " effectué " << endl;
     }
     exportation(donnees, indices_redu);
     return 0;
@@ -144,30 +144,41 @@ Mat_indice seuillage(const Donnees& donnees){
 
 void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destination){
         //Début du filtrage
-        for (size_t li = 1; li < donnees.li - 1; ++li) { // On parcours les lignes (sans la première et la dernière)
-            for (size_t col = 1; col < donnees.col - 1; ++col) { // On parcours les colonnes (sans la première et la dernière)
+        for (size_t li(1); li < donnees.li - 1; ++li) { // On parcours les lignes (sans la première et la dernière)
+            cout << "\tDébut ligne n° " << li << " sur " << donnees.li << endl;
+            for (size_t col(1); col < donnees.col - 1; ++col) { // On parcours les colonnes (sans la première et la dernière)
+                cout << "\tDébut colonne n° " << col << " sur " << donnees.col << endl;
                 vector<int> nb_pixels_voisins(donnees.nbR, 0); //Variable pour compter le nombre de pixels voisins d'une même couleur
                 //Comptage des couleurs environnantes
                 for (int i = -1; i <= 1; ++i) { //On parcours les pixels voisins (lignes)
                     for (int j = -1; j <= 1; ++j) { //idem (colonnes)
                         if (!(j == 0 && i == 0)) { //On exclu le pixel de base
-                            size_t indice_pixel(entree[li + i][col + j]-1);
+                            size_t indice_pixel = (entree[li + i][col + j])-1;
+                            cout << indice_pixel;
                             if(indice_pixel != ind_coul_bord)
                                 ++nb_pixels_voisins[indice_pixel]; //On ajoute l'indice du pixel voisin
                         }
                     }
                 }
+                //cout << "";
                 //On regarde  si une couleur a au moins 6 pixels voisins
                 for (size_t i = 0; i < donnees.nbR; ++i) {
+                    cout << "\t\t Prédestination " << i <<": ";
                     if (nb_pixels_voisins[i] >= pixels_voisins_min) {
                         destination[li][col] = i+1;
+                        cout << "\t\tDestination (>=6)[" << li << "]["<< col << "] = " << i+1 << endl;
                         i = donnees.nbR+1; //sortie de la boucle au prochain passage
                     } else{  //if (i == donnees.nbR-1)
+
                         destination[li][col] = ind_coul_bord;
+                        cout << "\t\tDestination (<6)[" << li << "]["<< col << "] <- " << ind_coul_bord << endl;
                     }
                 }
+                cout << "\t Destination = " << destination[li][col] << endl;
             }
+            cout << "\t ligne finie" << endl;
         }
+        cout << "\t tableau fini" << endl;
 }
 
 void import_image(Donnees& donnees){
@@ -185,7 +196,7 @@ void import_image(Donnees& donnees){
     }
 }
 
-bool is_color(int color) {
+void is_color(int color) {
     if(color>MAX || color <0){
         error_color(color);
         exit(0);
