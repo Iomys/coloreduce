@@ -3,7 +3,6 @@
  */
 #include <iostream>
 #include <vector>
-#include <array>
 #include <cmath>
 
 
@@ -71,14 +70,11 @@ int main() {
     import(donnees);
     Mat_indice indices_redu=seuillage(donnees);
     Mat_indice destination(donnees.li, vector<size_t>(donnees.col, ind_coul_bord));
-    for (int incre = 0; incre < donnees.nbF; ++incre)
+    for (int incre = 0; incre < donnees.nbF; ++incre) {
         filtrage(donnees, indices_redu, destination);
-//    for(int i=0; i<donnees.li; ++i){
-//        for(int j=0; i<donnees.col;++j){
-//            cout << indices_redu[i][j] << " ";
-//        }
-//        cout << endl;
-//    }
+        indices_redu = destination;
+        //test
+    }
     exportation(donnees, indices_redu);
     return 0;
 }
@@ -147,7 +143,7 @@ Mat_indice seuillage(const Donnees& donnees){
 
 
 void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destination){
-
+        //Début du filtrage
         for (size_t li = 1; li < donnees.li - 1; ++li) { // On parcours les lignes (sans la première et la dernière)
             for (size_t col = 1; col < donnees.col - 1; ++col) { // On parcours les colonnes (sans la première et la dernière)
                 vector<int> nb_pixels_voisins(donnees.nbR, 0); //Variable pour compter le nombre de pixels voisins d'une même couleur
@@ -155,8 +151,9 @@ void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destinatio
                 for (int i = -1; i <= 1; ++i) { //On parcours les pixels voisins (lignes)
                     for (int j = -1; j <= 1; ++j) { //idem (colonnes)
                         if (!(j == 0 && i == 0)) { //On exclu le pixel de base
-                            ++nb_pixels_voisins[entree[li + i][col + j]-1]; //On ajoute l'indice du pixel voisin
-
+                            size_t indice_pixel(entree[li + i][col + j]-1);
+                            if(indice_pixel != ind_coul_bord)
+                                ++nb_pixels_voisins[indice_pixel]; //On ajoute l'indice du pixel voisin
                         }
                     }
                 }
@@ -165,14 +162,11 @@ void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destinatio
                     if (nb_pixels_voisins[i] >= pixels_voisins_min) {
                         destination[li][col] = i+1;
                         i = donnees.nbR+1; //sortie de la boucle au prochain passage
-                    } else{ //if (i == donnees.nbR-1)
+                    } else{  //if (i == donnees.nbR-1)
                         destination[li][col] = ind_coul_bord;
                     }
                 }
             }
-        }
-        for(size_t i=0; i<donnees.li;++i){
-            destination[i].swap(entree[i]);
         }
 }
 
