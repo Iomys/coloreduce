@@ -23,6 +23,7 @@ struct Couleur{
     int b;
 };
 constexpr int MAX(255);
+constexpr double EPSILON(0.001);
 constexpr Couleur coul_bord = {0,0,0};
 constexpr double seuil_min(0.);
 constexpr double seuil_max(1.);
@@ -53,17 +54,18 @@ void import_filtrages(Donnees& donnees);
 void import_nbR(Donnees& donnees);
 void import_seuils(Donnees& donnees) ;
 void import_image(Donnees& donnees);
-void bord_noir(Donnees& donnees, Mat_indice& image);
+
 
 //Fonctions de modification de l'image
 Mat_indice seuillage(const Donnees& donnees);
 double int_normalisee(Couleur couleur);
 void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destination);
+void bord_noir(Donnees& donnees, Mat_indice& image);
 
 
 void exportation(const Donnees& donnees, const Mat_indice& indice_redu);
 //Fonctions de tests
-void is_color(int color);
+void is_color(int color, int numero);
 
 int main() {
     //Variables globales
@@ -98,6 +100,10 @@ void import_couleurs(Donnees& donnees){
     for(int i=1;i<=donnees.nbR;i++){
     int rouge, vert, bleu;
     cin >> rouge >> vert >> bleu;
+        is_color(rouge, i);
+        is_color(vert, i);
+        is_color(bleu, i);
+
         donnees.coul_redu.push_back({rouge,vert,bleu});
     }
 }
@@ -110,6 +116,10 @@ void import_seuils(Donnees& donnees){
             exit(0);
         }
         donnees.seuils.push_back(transfert);
+        if(donnees.seuils[i+1]-donnees.seuils[i]< EPSILON){
+            error_threshold(donnees.seuils[i+1]);
+            exit(0);
+        }
     }
     donnees.seuils.push_back(seuil_max);
 }
@@ -205,9 +215,9 @@ void import_image(Donnees& donnees){
     }
 }
 
-void is_color(int color) {
-    if(color>MAX || color <0){
-        error_color(color);
+void is_color(int color, int numero) {
+    if(color>MAX || color<0){
+        error_color(numero);
         exit(0);
     }
 }
@@ -231,6 +241,7 @@ void exportation(const Donnees& donnees, const Mat_indice& indice_redu){
         }
         cout << endl;
     }
+    cout << endl;
 }
 void error_nbR(int nbR) {
     cout << "Invalid number of colors: " << nbR << endl;
