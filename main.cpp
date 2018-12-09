@@ -53,6 +53,7 @@ void import_filtrages(Donnees& donnees);
 void import_nbR(Donnees& donnees);
 void import_seuils(Donnees& donnees) ;
 void import_image(Donnees& donnees);
+void bord_noir(Donnees& donnees, Mat_indice& image);
 
 //Fonctions de modification de l'image
 Mat_indice seuillage(const Donnees& donnees);
@@ -70,11 +71,12 @@ int main() {
     import(donnees);
     Mat_indice indices_redu=seuillage(donnees);
     Mat_indice destination(donnees.li, vector<size_t>(donnees.col, ind_coul_bord));
-    for (int incre = 0; incre < donnees.nbF; ++incre) {
+    destination = indices_redu;
+    for (int i = 0; i < donnees.nbF; ++i) {
         filtrage(donnees, indices_redu, destination);
-        indices_redu = destination;
-        cout << "Filtrage n° " << incre+1 << " effectué " << endl;
+        indices_redu.swap(destination);
     }
+    bord_noir(donnees, indices_redu);
     exportation(donnees, indices_redu);
     return 0;
 }
@@ -84,8 +86,6 @@ void import(Donnees& donnees) {
     import_seuils(donnees);
     import_filtrages(donnees);
     import_image(donnees);
-
-
 }
 void import_nbR(Donnees& donnees){
     cin >> donnees.nbR; //Nombre réduit de couleurs
@@ -127,10 +127,10 @@ Mat_indice seuillage(const Donnees& donnees){
         for(size_t col = 0; col<donnees.col;++col){
             double intensite(int_normalisee(donnees.image[li][col]));
             bool seuil_trouve(false);
-            for(size_t i = 0; i < donnees.nbR && !seuil_trouve ;++i) {
-                if (donnees.seuils[i] <= intensite &&
-                    donnees.seuils[i + 1] > intensite) {
-                    img_coul_redu[li][col] = i+1 ;
+            for(size_t i = 1; i <= donnees.nbR && !seuil_trouve ;++i) {
+                if (donnees.seuils[i-1] <= intensite &&
+                    donnees.seuils[i] > intensite) {
+                    img_coul_redu[li][col] = i ;
                     seuil_trouve = true;
                 }
             }
@@ -141,44 +141,53 @@ Mat_indice seuillage(const Donnees& donnees){
     return img_coul_redu;
 }
 
-
+void bord_noir(Donnees& donnees, Mat_indice& image){
+    for(size_t li(0); li < donnees.li; ++li){
+        for(size_t col(0); col < donnees.col; ++col){
+           if(li==0 || li==donnees.li-1 || col==0 || col==donnees.col-1){
+            image[li][col]=ind_coul_bord;
+           }
+        }
+    }
+}
 void filtrage(const Donnees& donnees, Mat_indice& entree, Mat_indice& destination){
         //Début du filtrage
+
         for (size_t li(1); li < donnees.li - 1; ++li) { // On parcours les lignes (sans la première et la dernière)
-            cout << "\tDébut ligne n° " << li << " sur " << donnees.li << endl;
+            //cout << "\tDébut ligne n° " << li << " sur " << donnees.li << endl;
             for (size_t col(1); col < donnees.col - 1; ++col) { // On parcours les colonnes (sans la première et la dernière)
-                cout << "\tDébut colonne n° " << col << " sur " << donnees.col << endl;
-                vector<int> nb_pixels_voisins(donnees.nbR, 0); //Variable pour compter le nombre de pixels voisins d'une même couleur
+                //cout << "\tDébut colonne n° " << col << " sur " << donnees.col << endl;
+                vector<int> nb_pixels_voisins(donnees.nbR+1, 0); //Variable pour compter le nombre de pixels voisins d'une même couleur
                 //Comptage des couleurs environnantes
                 for (int i = -1; i <= 1; ++i) { //On parcours les pixels voisins (lignes)
                     for (int j = -1; j <= 1; ++j) { //idem (colonnes)
                         if (!(j == 0 && i == 0)) { //On exclu le pixel de base
-                            size_t indice_pixel = (entree[li + i][col + j])-1;
-                            cout << indice_pixel;
-                            if(indice_pixel != ind_coul_bord)
-                                ++nb_pixels_voisins[indice_pixel]; //On ajoute l'indice du pixel voisin
+                            size_t voisin = entree[li + i][col + j];
+                            //cout << voisin;
+                            if(voisin != ind_coul_bord)
+                                ++nb_pixels_voisins[voisin-1]; //On ajoute l'indice du pixel voisin
                         }
                     }
                 }
                 //cout << "";
                 //On regarde  si une couleur a au moins 6 pixels voisins
                 for (size_t i = 0; i < donnees.nbR; ++i) {
-                    cout << "\t\t Prédestination " << i <<": ";
+                    //cout << "\t\t Prédestination " << i <<": ";
                     if (nb_pixels_voisins[i] >= pixels_voisins_min) {
                         destination[li][col] = i+1;
-                        cout << "\t\tDestination (>=6)[" << li << "]["<< col << "] = " << i+1 << endl;
+                        //cout << "\t\tDestination (>=6)[" << li << "]["<< col << "] = " << i+1 << endl;
                         i = donnees.nbR+1; //sortie de la boucle au prochain passage
                     } else{  //if (i == donnees.nbR-1)
 
                         destination[li][col] = ind_coul_bord;
-                        cout << "\t\tDestination (<6)[" << li << "]["<< col << "] <- " << ind_coul_bord << endl;
+                        //cout << "\t\tDestination (<6)[" << li << "]["<< col << "] <- " << ind_coul_bord << endl;
                     }
                 }
-                cout << "\t Destination = " << destination[li][col] << endl;
+                //cout << "\t Destination = " << destination[li][col] << endl;
             }
-            cout << "\t ligne finie" << endl;
+            //cout << "\t ligne finie" << endl;
         }
-        cout << "\t tableau fini" << endl;
+        //cout << "\t tableau fini" << endl;
 }
 
 void import_image(Donnees& donnees){
